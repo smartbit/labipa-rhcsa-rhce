@@ -2,7 +2,7 @@
 
 Sander van Vugt offers an lab environment created with VMware fusion. Importing this in VirtualBox on macOS is not a trivial case as VMware Fusion uses different network settings. This guide explains how to import Sander's Lab and get a working environment (and maybe learn to understand `nmcli` better).
 
-Alternatively create a lab with Vagrant and Ansible by building your [RHCSA RHCE Lab environment](../RHCSA-RHCE-Lab-Environment) from scratch.
+Alternatively create a lab with Vagrant and Ansible by building your [RHCSA RHCE Lab environment](../../../RHCSA-RHCE-Lab-Environment) from scratch.
 
 # Create a host-only network
 Open the setting of VirtualBox, go to Network, create an new Host-only Network ![create host-only network](https://cloud.githubusercontent.com/assets/16225624/18674769/a0e60e08-7f50-11e6-9518-a41f4e08bad6.png)
