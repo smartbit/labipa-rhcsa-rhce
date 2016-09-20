@@ -45,7 +45,6 @@ yum -y update --security ; shutdown now
 ```
 ![untitled 23](https://cloud.githubusercontent.com/assets/16225624/18674509/c3c944ea-7f4f-11e6-9a2b-967423186654.png)
 
-To save the current state create a snapshot <!-- ![take snapshot](https://cloud.githubusercontent.com/assets/16225624/18676516/25bcaac4-7f56-11e6-9ef8-ed19e4b13a61.png) -->
-![take snapshot copy](https://cloud.githubusercontent.com/assets/16225624/18677143/213924d0-7f58-11e6-9eb1-f9f164a6b16c.png)
+To save the current state create a snapshot ![take snapshot copy](https://cloud.githubusercontent.com/assets/16225624/18677143/213924d0-7f58-11e6-9eb1-f9f164a6b16c.png) <!-- ![take snapshot](https://cloud.githubusercontent.com/assets/16225624/18676516/25bcaac4-7f56-11e6-9ef8-ed19e4b13a61.png) -->
 
 Your server1 is ready for exercises ![snapshot created](https://cloud.githubusercontent.com/assets/16225624/18674637/292f860a-7f50-11e6-9325-848844b7b7a6.png)
