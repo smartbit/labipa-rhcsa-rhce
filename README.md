@@ -26,6 +26,7 @@ Add an host adapter and connect it to host-only network `192.168.4.0/24` ![add h
 The VM now has 2 adapters:
 - Adapter 2 connected to eg. `enp0s8`/`eth0` on subnet 192.168.4.0/24 and will **not** be the default gateway.
 - Adapter 1 connected to eg. `enp0s17`/`eth1` will be NAT for internet access (eg 10.0.2.2/24) but will **not** be setting DNS
+
 <!-- ![2 adapters](https://cloud.githubusercontent.com/assets/16225624/18675550/fd218998-7f52-11e6-90ed-e40c4724fdd4.png) -->
 
 Then start the new vm ![start server1](https://cloud.githubusercontent.com/assets/16225624/18676011/8b31155e-7f54-11e6-86ee-d4c739acd62b.png) In Terminal connect with ssh and excute these commands for Server1:
