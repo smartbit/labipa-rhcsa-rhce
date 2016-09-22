@@ -1,6 +1,7 @@
-# Install instructions Lab Environment _Red Hat RHCSA-RHCE 7 Cert Guide_
+p# Install instructions Lab Environment _Red Hat RHCSA-RHCE 7 Cert Guide_
 
-Sander van Vugt offers an lab environment created with VMware fusion. Importing this in VirtualBox on macOS is not a trivial case as VMware Fusion uses different network settings. This guide explains how to import Sander's Lab and get a working environment (and maybe learn to understand `nmcli` better).
+Sander van Vugt offers an lab environment created with VMware fusion. It is available for download at http://rhatcert.com or through the book’s website
+at [http://pearsonitcertification.com](http://www.pearsonitcertification.com/promotions/book-registration-red-hat-rhcsa-rhce-7-cert-guide-premium-140923#vm). Importing this in VirtualBox on macOS is not a trivial case as VMware Fusion uses different network settings. This guide explains how to import Sander's Lab and get a working environment (and maybe learn to understand `nmcli` better).
 
 Alternatively create a lab with Vagrant and Ansible by building your [RHCSA RHCE Lab environment](../../../RHCSA-RHCE-Lab-Environment) from scratch.
 
@@ -32,13 +33,13 @@ The VM now has 2 adapters:
 Then start the new vm ![start server1](https://cloud.githubusercontent.com/assets/16225624/18676011/8b31155e-7f54-11e6-86ee-d4c739acd62b.png) In Terminal connect with ssh and excute these commands for Server1:
 ```bash
 ssh root@192.168.4.210
+cat /etc/centos-release; nmcli --version
 nmcli connection add con-name eth1 type ethernet ifname enp0s17 autoconnect yes save yes
 nmcli connection modify eth1 ipv4.ignore-auto-dns yes
 nmcli device disconnect enp0s17;nmcli connection up eth1
 cat /etc/resolv.conf
 ip r
-# RHEL 7.0 has NetworkManager v0.9.9.1 and doesn't support ipv4.gateway
-# RHEL 7.1+ uses NetworkManager v1.0.0 which does support ipv4.gateway
+# RHEL 7.0 uses NetworkManager v0.9.9.1 and doesn't support ipv4.gateway, therefor use ipv4.addresses without 'gw'
 nmcli connection modify eth0 ipv4.never-default yes ipv6.never-default yes ipv4.addresses "192.168.4.210/24"
 systemctl restart NetworkManager; systemctl restart NetworkManager
 ip r
@@ -50,3 +51,55 @@ To save the current state create a snapshot ![take snapshot copy](https://cloud.
 <!-- ![take snapshot](https://cloud.githubusercontent.com/assets/16225624/18676516/25bcaac4-7f56-11e6-9ef8-ed19e4b13a61.png) -->
 
 Your server1 is ready for exercises ![snapshot created](https://cloud.githubusercontent.com/assets/16225624/18674637/292f860a-7f50-11e6-9325-848844b7b7a6.png)
+
+## FreeIPA
+Like Server1, with these commands
+```bash
+ssh root@192.168.4.220
+cat /etc/centos-release; nmcli --version
+grep -B2 -A1 8.8.8.8 /etc/named.conf
+ip r
+# RHEL 7.1+ uses NetworkManager v1.0.0 which does support ipv4.gateway
+nmcli connection modify eth0 ipv4.never-default yes ipv6.never-default yes ipv4.gateway "" ipv4.dns 192.168.4.200
+ip r del default via 192.168.4.2 dev eth0
+nmcli connection add con-name eth1 type ethernet ifname eth1 save yes autoconnect no
+nmcli connection modify eth1 ipv4.ignore-auto-dns yes ipv6.ignore-auto-dns yes connection.autoconnect yes
+sleep 2
+ip route add default via 10.0.2.2 dev eth1
+ip r
+echo $'password\npassword\npassword' | kinit admin # password expired
+klist
+yum -y update --security  ; shutdown now
+```
+
+
+## Server2
+Like Server1, with these commands
+```bash
+ssh root@192.168.4.220
+cat /etc/centos-release; nmcli --version
+nmcli connection add con-name eth1 type ethernet ifname eth1 autoconnect yes save yes
+nmcli connection modify eth1 ipv4.ignore-auto-dns yes
+nmcli device disconnect eth1;nmcli connection up eth1
+cat /etc/resolv.conf
+ip r
+nmcli connection modify eth0 ipv4.never-default yes ipv6.never-default yes ipv4.addresses "192.168.4.220/24"
+systemctl restart NetworkManager; systemctl restart NetworkManager
+ip r
+yum -y update --security ; shutdown now
+```
+Alternatively
+```bash
+ssh root@192.168.4.220
+cat /etc/centos-release; nmcli --version
+nmcli connection add con-name eth1 type ethernet ifname eth1 save yes autoconnect no
+nmcli connection modify eth1 ipv4.ignore-auto-dns yes connection.autoconnect yes
+sleep 1
+nmcli connection modify eth0 ipv4.never-default yes ipv6.never-default yes ipv4.addresses "192.168.4.220/24"
+sleep 1
+ip r del default via 192.168.4.2 dev eth0
+sleep 1
+ip r
+cat /etc/resolv.conf # yum only works if FreeIPA @ 192.168.4.200 is up and serving DNS
+yum -y update --security ; shutdown now
+```
