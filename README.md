@@ -1,4 +1,4 @@
-p# Install instructions Lab Environment _Red Hat RHCSA-RHCE 7 Cert Guide_
+## Install instructions Lab Environment _Red Hat RHCSA-RHCE 7 Cert Guide_
 
 Sander van Vugt offers an lab environment created with VMware fusion. It is available for download at http://rhatcert.com or through the book’s website
 at [http://pearsonitcertification.com](http://www.pearsonitcertification.com/promotions/book-registration-red-hat-rhcsa-rhce-7-cert-guide-premium-140923#vm). Importing this in VirtualBox on macOS is not a trivial case as VMware Fusion uses different network settings. This guide explains how to import Sander's Lab and get a working environment (and maybe learn to understand `nmcli` better).
@@ -34,6 +34,7 @@ Then start the new vm ![start server1](https://cloud.githubusercontent.com/asset
 ```bash
 ssh root@192.168.4.210
 cat /etc/centos-release; nmcli --version
+mkdir /etc/openldap/cacerts # make the lab easier ;-)
 nmcli connection add con-name eth1 type ethernet ifname enp0s17 autoconnect yes save yes
 nmcli connection modify eth1 ipv4.ignore-auto-dns yes
 nmcli device disconnect enp0s17;nmcli connection up eth1
@@ -78,6 +79,7 @@ Like Server1, with these commands
 ```bash
 ssh root@192.168.4.220
 cat /etc/centos-release; nmcli --version
+mkdir /etc/openldap/cacerts
 nmcli connection add con-name eth1 type ethernet ifname eth1 autoconnect yes save yes
 nmcli connection modify eth1 ipv4.ignore-auto-dns yes
 nmcli device disconnect eth1;nmcli connection up eth1
@@ -101,5 +103,6 @@ ip r del default via 192.168.4.2 dev eth0
 sleep 1
 ip r
 cat /etc/resolv.conf # yum only works if FreeIPA @ 192.168.4.200 is up and serving DNS
-yum -y update --security ; shutdown now
+# 'yum -y groupinstall Directory\ Client' fails on server2
+yum -y update ; shutdown now
 ```
