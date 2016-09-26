@@ -44,6 +44,8 @@ ip r
 nmcli connection modify eth0 ipv4.never-default yes ipv6.never-default yes ipv4.addresses "192.168.4.210/24"
 systemctl restart NetworkManager; systemctl restart NetworkManager
 ip r
+rm -rf /var/tmp/abrt/Python-2016-01-19-23\:15\:24-9596
+systemctl set-default graphical.target 
 yum -y update --security ; shutdown now
 ```
 ![untitled 23](https://cloud.githubusercontent.com/assets/16225624/18674509/c3c944ea-7f4f-11e6-9a2b-967423186654.png)
@@ -104,5 +106,5 @@ sleep 1
 ip r
 cat /etc/resolv.conf # yum only works if FreeIPA @ 192.168.4.200 is up and serving DNS
 # 'yum -y groupinstall Directory\ Client' fails on server2
-yum -y update ; shutdown now
+yum -y update --security ; shutdown now
 ```

@@ -16,6 +16,7 @@
 <br /> see `man authconfig | grep -A2 nslcd` and notice **Used to**
 - p142 **authconfig-tui** command is _deprecated_, see `man authconfig-tui | grep depr`. [CertDepot](https://www.certdepot.net/ldap-client-configuration-authconfig/) has two alternative exercises:
   #### the nslcd option
+  see https://arthurdejong.org/nss-pam-ldapd/setup
   ```bash
   yum install -y openldap-clients nss-pam-ldapd
   mkdir /etc/openldap/cacerts
@@ -25,6 +26,7 @@
              --ldapbasedn="dc=example,dc=com" \
              --enableldaptls --update
   systemctl list-unit-files | grep -e sssd -e nslcd
+  nslcd -V
   grep -v -e "#" -e "^$" /etc/nslcd.conf
   authconfig --test | grep SSSD # SSSD ... *disabled*
   grep -e pam_sss -e -pam_ldap /etc/pam.d/system-auth  
@@ -117,7 +119,7 @@
 3
 scp root@server1.example.com:/etc/yum.repos.d/labipa.repo /etc/yum.repos.d/
 
-Chap 8 Networking
+### Chap 8 Networking
 In https://www.safaribooksonline.com/library/view/learning-path-red/9780134664040/RCSA_01_09_08.html favorites mentions netstat —> ip -s link & ss -tulpen, see https://dougvitale.wordpress.com/2011/12/21/deprecated-linux-networking-commands-and-their-replacements/
 Appendix A “10. tar xvf /tmp/etchome.tgz /etc/passwd” should be “tar xvf /tmp/etchome.tgz etc/passwd"
 Appendix B: Table 2.4 remove
@@ -131,3 +133,8 @@ in visual mode use to cut
 in visual mode use to copy
 Appendix C: Table 2.4 add
 ^ or 0
+
+### Chap 18 Managing and Understanding the Boot Procedure
+- p413 _Understanding Wants_: **default** .wants are in **/usr/lib**/systemd/system/*.wants, system-specific (created with `systemctl enable`) wants are in **/etc**/systemd/system/*.wants **
+- p417 `cat /usr/lib/systemd/system/iptables.service` file doesn't exist on Server2 (non-GUI)
+- p418 on Server**2** `systemctl start iptables` generates message `Failed to issue method call: Unit iptables.service failed to load: No such file or directory.` as iptables is not installed on non-GUI. Therefor `systemctl enable iptables`also failes on Server2. <br /> Notice that `systemctl mask iptables` **does** generate the link to /dev/null although the services is not installed on Server2.
