@@ -44,8 +44,7 @@ ip r
 nmcli connection modify eth0 ipv4.never-default yes ipv6.never-default yes ipv4.addresses "192.168.4.210/24"
 systemctl restart NetworkManager; systemctl restart NetworkManager
 ip r
-rm -rf /var/tmp/abrt/Python-2016-01-19-23\:15\:24-9596
-systemctl set-default graphical.target 
+# systemctl set-default graphical.target # optional
 yum -y update --security ; shutdown now
 ```
 ![untitled 23](https://cloud.githubusercontent.com/assets/16225624/18674509/c3c944ea-7f4f-11e6-9a2b-967423186654.png)
