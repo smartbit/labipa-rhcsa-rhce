@@ -14,6 +14,8 @@
   ```
 - p142 `nslcd service is configured and started when using autconfig-tui` —> `sssd service is configured and started when using authconfig-tui` (with an h). Maybe a change from rhel6? Try the exercise and then run `find / -name nslc` or `systemctl list-unit-files | grep -e sssd -e nslcd` and you'll find nothing related to nslcd.
 <br /> see `man authconfig | grep -A2 nslcd` and notice **Used to**
+- p145 Step 5 first create the directory `mkdir /etc/openldap/cacerts` then get the certificate with `scp labipa.example.com:/root/cacert.p12 /etc/openldap/cacerts` otherwise scp will create a file cacerts not a file /etc/openldap/cacerts/ca.crt.
+
 - p142 **authconfig-tui** command is _deprecated_, see `man authconfig-tui | grep depr`. [CertDepot](https://www.certdepot.net/ldap-client-configuration-authconfig/) has two alternative exercises:
   #### the nslcd option
   see https://arthurdejong.org/nss-pam-ldapd/setup
@@ -58,7 +60,7 @@
    su - ldapuser1
    whoami
    pwd
-   exitsh
+   exit
   ```
   #### compare nslcd and sssd
   ```txt
@@ -111,7 +113,6 @@
   automount:  files ldap                      |  automount:  files sss
   aliases:    files nisplus                      aliases:    files nisplus
   ```
-- p145 Step 5 first create the directory `mkdir /etc/openldap/cacerts` then get the certificate with `scp labipa.example.com:/root/cacert.p12 /etc/openldap/cacerts` otherwise scp will create a file cacerts not a file /etc/openldap/cacerts/ca.crt.
 
 ## Chap 7 : lapipa
 1
@@ -136,5 +137,24 @@ Appendix C: Table 2.4 add
 
 ### Chap 18 Managing and Understanding the Boot Procedure
 - p413 _Understanding Wants_: **default** .wants are in **/usr/lib**/systemd/system/*.wants, system-specific (created with `systemctl enable`) wants are in **/etc**/systemd/system/*.wants **
+- p147 from [Understanding systemd units and unit files](https://www.digitalocean.com/community/tutorials/understanding-systemd-units-and-unit-files#unit-section-directives)
+  - `[Unit]`
+    - **Wants=**: This directive is similar to Requires=, but less strict. Systemd _will attempt_ to start any units listed here when this unit is activated. If these units are not found or fail to start, the current unit will **continue** to function. This is the recommended way to configure most dependency relationships. Again, this implies a parallel activation unless modified by other directives.
+    - **Requires=**: This directive lists any units upon which this unit _essentially_ depends. If the current unit is activated, the units listed here _must_ successfully activate as well, else this unit will **fail**. These units are started _in parallel_ with the current unit by default.
+  - `[Install]`
+    - **WantedBy=:**
+    <br />The WantedBy= directive is the **most common way** to specify how a unit should be enabled. This directive allows you to specify a dependency relationship in a similar way to the Wants= directive does in the [Unit] section. The difference is that this directive is included in the ancillary unit allowing the primary unit listed **to remain relatively clean**. When a unit with this directive is enabled, a _directory_ will be created within /etc/systemd/system named after the specified unit with `.wants` appended to the end. Within this, a symbolic link to the current unit will be created, creating the dependency. For instance, if the current unit has WantedBy=multi-user.target, a directory called multi-user.target.wants will be created within /etc/systemd/system (if not already available) and a symbolic link to the current unit will be placed within. Disabling this unit removes the link and removes the dependency relationship.
+    - **RequiredBy=**: This directive is very similar to the WantedBy= directive, but instead specifies a required dependency that will cause the activation to **fail** if not met. When enabled, a unit with this directive will create a directory ending with **.requires**.
+- from _man 7 systemd.unit_:
+  - Along with a unit file foo.service, the directory foo.service**.wants/** may exist. All unit files symlinked from such a directory are **implicitly** added as dependencies of _type Wants=_ to the unit. This is useful to hook units into the start-up of other units, **without having to modify their unit files.** For details about the semantics of Wants=, see below. The preferred way to create symlinks in the .wants/ directory of a unit file is with the enable command of the systemctl(1) tool which reads information from the [Install] section of unit files (see below). A similar functionality exists for Requires= type dependencies as well, the directory suffix is .requires/ in this case.
+  - **Wants=**
+  <br />A weaker version of _Requires=_. Units listed in this option will be started if the configuring unit is. However, if the listed units fail to start or cannot be added to the transaction this has no impact on the validity of the transaction as a whole. This is the
+  recommended way to hook start-up of one unit to the start-up of another unit.
+  <br />Note that dependencies of this type _may also be configured_ outside of the unit configuration file **by adding symlinks** to a .wants/ directory accompanying the unit file. 
 - p417 `cat /usr/lib/systemd/system/iptables.service` file doesn't exist on Server2 (non-GUI)
 - p418 on Server**2** `systemctl start iptables` generates message `Failed to issue method call: Unit iptables.service failed to load: No such file or directory.` as iptables is not installed on non-GUI. Therefor `systemctl enable iptables`also failes on Server2. <br /> Notice that `systemctl mask iptables` **does** generate the link to /dev/null although the services is not installed on Server2.
+- p149 from _man systeemctl_:
+  <br />`systemctl isolate`
+  <br />Start the unit specified on the command line and its dependencies and **stop all others**.
+  <br />This is similar to changing the runlevel in a traditional init system. The isolate command will **immediately stop** processes that are not enabled in the new unit, possibly including the graphical environment or terminal you are currently using.
+  <br /> Note that this is allowed **only** on units where **AllowIsolate=** is enabled.
