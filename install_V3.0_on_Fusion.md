@@ -4,8 +4,6 @@
 
 
 ## labipa
-- pip  
-  tzupdate
 - append `/home   *(rw)` to /etc/exports & `systemctl restart nfs-server`
 - append `\tguest ok = yes` to /etc/samba/smb.conf & `for i in smb nmb; do systemctl restart $i; done`
 - login with root (via other), set keyboard etc and logout again
