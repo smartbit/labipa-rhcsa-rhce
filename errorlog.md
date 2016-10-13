@@ -42,8 +42,8 @@
   exit
   ```
 
-  #### the sssd option
-  you might try this on Server2 instead (/usr/lib/systemd/systemd-logind crashed on Server1 with CentOS 7.0)
+  #### the System Security Services Daemon option
+  With CentOS 7.0 (images V2.0) you might try sssd on Server2 instead (/usr/lib/systemd/systemd-logind crashed on Server1 with CentOS 7.0)
   ```bash
   yum install -y sssd # on Server2
   mkdir /etc/openldap/cacerts
@@ -53,7 +53,7 @@
              --ldapbasedn="dc=example,dc=com" \
              --enableldaptls --enablemkhomedir --update
    systemctl list-unit-files | grep -e sssd -e nslcd
-   grep -v -e "#" -e "^$" /etc/sssd/sssd.conf
+   grep -v -e "#" -e "^$" -e "^\[" /etc/sssd/sssd.conf
    authconfig --test | grep SSSD # SSSD ... *enabled*
    grep -e pam_sss -e -pam_ldap /etc/pam.d/system-auth
    getent passwd ldapuser1
@@ -150,7 +150,7 @@ Appendix C: Table 2.4 add
   - **Wants=**
   <br />A weaker version of _Requires=_. Units listed in this option will be started if the configuring unit is. However, if the listed units fail to start or cannot be added to the transaction this has no impact on the validity of the transaction as a whole. This is the
   recommended way to hook start-up of one unit to the start-up of another unit.
-  <br />Note that dependencies of this type _may also be configured_ outside of the unit configuration file **by adding symlinks** to a .wants/ directory accompanying the unit file. 
+  <br />Note that dependencies of this type _may also be configured_ outside of the unit configuration file **by adding symlinks** to a .wants/ directory accompanying the unit file.
 - p417 `cat /usr/lib/systemd/system/iptables.service` file doesn't exist on Server2 (non-GUI)
 - p418 on Server**2** `systemctl start iptables` generates message `Failed to issue method call: Unit iptables.service failed to load: No such file or directory.` as iptables is not installed on non-GUI. Therefor `systemctl enable iptables`also failes on Server2. <br /> Notice that `systemctl mask iptables` **does** generate the link to /dev/null although the services is not installed on Server2.
 - p149 from _man systeemctl_:
@@ -158,3 +158,99 @@ Appendix C: Table 2.4 add
   <br />Start the unit specified on the command line and its dependencies and **stop all others**.
   <br />This is similar to changing the runlevel in a traditional init system. The isolate command will **immediately stop** processes that are not enabled in the new unit, possibly including the graphical environment or terminal you are currently using.
   <br /> Note that this is allowed **only** on units where **AllowIsolate=** is enabled.
+
+  ## Chapter 16: Basic Kernel Management
+- p383 demonstrate how to create options in an /etc/modprobe.d/\*.conf file with options that will persist after reboot.  
+Notice that these commands disconnect the network, run `modprobe -r` from the console, put the commands in a bash-script (and hope tcp will not notice the disconnection) or reboot.  
+In a second tty (eg ctrl-leftalt-F2 or `chvt 2`) run `udevadm monitor` and see the udev events.
+    ```bash
+  modinfo e1000 | grep -e parm: -e description: # what params do we have?
+  ethtool eth0 | grep -A2 "Advertised link modes" # what is the advertised Speed?
+  echo "options e1000 Speed=100" > /etc/modprobe.d/e1000.conf
+  modprobe -r e1000
+  modprobe e1000
+  ethtool eth0 | grep -A2 "Advertised link modes"
+  rm -f /etc/modprobe.d/e1000.conf
+  modprobe -r e1000
+  modprobe e1000
+  ethtool eth0 | grep -A2 "Advertised link modes"
+    ```
+    See `man 5 modprobe.d` for details on the .conf file.
+
+### Chapter 25: Configuring External Authentication and Authorization
+- p563 Centos 7.2 `man authconfig` states "The **authconfig-tui** is _deprecated_. No new configuration settings will be supported by its text user interface. Use **system-config-authentication GUI** application or the command line options instead." dated 22 July 2011
+- p563 for the exercises to work, create a few accounts first
+
+```bash
+dig labipa.example.com
+yum groups install Directory\ Client -y
+yum install -y pam_krb5 krb5-workstation
+yum -y install nss-pam-ldapd # sander doesn't mention this package
+mkdir -p /etc/openldap/cacerts
+scp labipa.example.com:/etc/ipa/ca.crt /etc/openldap/cacerts
+authconfig-tui
+ ┌────────────────┤ Authentication Configuration ├─────────────────┐
+│                                                                 │
+│  User Information        Authentication                         │
+│  [*] Cache Information   [*] Use MD5 Passwords                  │
+│  [*] Use LDAP            [*] Use Shadow Passwords               │
+│  [ ] Use NIS             [*] Use LDAP Authentication            │
+│  [ ] Use IPAv2           [ ] Use Kerberos                       │
+│  [ ] Use Winbind         [ ] Use Fingerprint reader             │
+│                          [ ] Use Winbind Authentication         │
+│                          [*] Local authorization is sufficient  │
+│                                                                 │
+│            ┌────────┐                      ┌──────┐             │
+│            │ Cancel │                      │ Next │             │
+│            └────────┘                      └──────┘             │
+│                                                                 │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+
+
+systemctl list-unit-files | grep -e sssd -e nslcd
+nslcd -V
+grep -v -e "#" -e "^$" /etc/nslcd.conf
+authconfig --test | grep SSSD # SSSD ... *enabled*
+grep -e pam_sss -e -pam_ldap /etc/pam.d/system-auth
+grep -v -e "#" -e "^$" -e "\[" /etc/sssd/sssd.conf
+systemctl restart sssd
+systemctl status -l sssd
+kinit admin
+su - ldapuser1
+authconfig-tui
+yum search pam_ldap
+yum search nss-pam-ldapd
+yum -y install nss-pam-ldapd
+authconfig-tui
+kinit admin
+kinit ldapuser1
+
+
+  ```
+
+### Chapter 34: Configuring DNS
+- p750 Exercise 34.1
+  ```bash
+  yum clean all # server2 has issues with yum
+  yum -y install unbound vim bind-utils # bindutils for dig
+  yum list installed | grep unbound
+  ss -tulpen | grep :53             # is unbound bound to ip-adresses?
+  systemctl start unbound; systemctl enable unbound
+  vim /etc/unbound/unbound.conf     # see p750
+  unbound-checkconf
+  systemctl restart unbound
+  firewall-cmd --permanent --add-service=dns; firewall-cmd --reload
+  firewall-cmd --list-all
+  ss -tulpen | grep :53             # is unbound bound to ip-adresses?
+  dig DNSKEY example.com. @192.168.4.220  # no ad-bit
+  dig DNSKEY rhatcert.com. @192.168.4.220 | grep -E " ad|$"   
+  ```
+- p751 The output of `dig +dnssec DNSKEY rhatcert.com` is fake,
+  - _either_ the domain is signed and returns the `ad` "Authenticated Data" flag,
+  - _or_ the domain is not signed, doesn't return the ad-bit and can't return DNSKEYs.  
+Try it yourself and verify that the rhatcert.com domain now is signed and the AD-flag is shown.
+- p752 TIP part2: using `unbound-control-setup` is far from travial. Unless practised, don't try on the exam.
+- p752 you get the trust anchors  
+- p752
