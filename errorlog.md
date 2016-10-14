@@ -179,17 +179,9 @@ In a second tty (eg ctrl-leftalt-F2 or `chvt 2`) run `udevadm monitor` and see t
 
 ### Chapter 25: Configuring External Authentication and Authorization
 - p563 Centos 7.2 `man authconfig` states "The **authconfig-tui** is _deprecated_. No new configuration settings will be supported by its text user interface. Use **system-config-authentication GUI** application or the command line options instead." dated 22 July 2011
-- p563 for the exercises to work, create a few accounts first
 
 ```bash
-dig labipa.example.com
-yum groups install Directory\ Client -y
-yum install -y pam_krb5 krb5-workstation
-yum -y install nss-pam-ldapd # sander doesn't mention this package
-mkdir -p /etc/openldap/cacerts
-scp labipa.example.com:/etc/ipa/ca.crt /etc/openldap/cacerts
-authconfig-tui
- ┌────────────────┤ Authentication Configuration ├─────────────────┐
+┌────────────────┤ Authentication Configuration ├─────────────────┐
 │                                                                 │
 │  User Information        Authentication                         │
 │  [*] Cache Information   [*] Use MD5 Passwords                  │
@@ -206,15 +198,147 @@ authconfig-tui
 │                                                                 │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
+```
+- p563 for the exercises to work, create a few accounts first
+https://www.certdepot.net/sys-understand-authconfig/
+```bash
+dig labipa.example.com
+yum groups info Directory\ Client
+yum groups install Directory\ Client -y
+# yum install -y pam_krb5 krb5-workstation   # not needed, part of
+mkdir -p /etc/openldap/cacerts
+scp labipa.example.com:/etc/ipa/ca.crt /etc/openldap/cacerts
+grep -E "USESSSDAUTH|USESSSD|FORCELEGACY" /etc/sysconfig/authconfig
+# sssd service running, "su - ldapuser1" works fine
+authconfig  --update \
+            --enablecachecreds \
+            --disableforcelegacy \
+            --enableshadow \
+            --enableldap \
+            --enableldapauth \
+            --ldapserver="labipa.example.com" \
+            --ldapbasedn="dc=example,dc=com" \
+            --enableldaptls \
+            --enablemkhomedir
 
+
+yum -y install nss-pam-ldapd  # without this package 'su - ldapuser1' fails
+# if you forgot, install nnss-pam-ldap and run authconfig again
+# no sssd installed, only ldap and krb5. kinit ldapuser1 & su - ldapuser1 succeed:
+authconfig  --update \
+            --disableforcelegacy \
+            --enableshadow \
+            --enableldap \
+            --enableldapauth \
+            --ldapserver="labipa.example.com" \
+            --ldapbasedn="dc=example,dc=com" \
+            --enableldaptls \
+            --enablekrb5 \
+            --krb5kdc="labipa.example.com" \
+            --krb5adminserver="labipa.example.com" \
+            --krb5realm="EXAMPLE.COM" \
+            --enablekrb5kdcdns \
+            --enablekrb5realmdns \
+            --enablemkhomedir
+--update \        # update configuration files
+--disableforcelegacy # use SSSD implicitly
+--enableshadow \  # enable shadowed passwords by default
+--enableldap \    # enable LDAP for user information by default
+--enableldapauth \ # enable LDAP for authentication by default
+--ldapserver="labipa.example.com" \
+--ldapbasedn="dc=example,dc=com" \
+--enableldaptls \
+--enablekrb5 \    # enable kerberos authentication by default
+--krb5kdc="labipa.example.com" \ # default kerberos KDC
+--krb5adminserver="labipa.example.com" \
+--krb5realm="EXAMPLE.COM" \ # default kerberos realm
+--enablekrb5kdcdns \ # enable use of DNS to find kerberos KDCs
+--enablekrb5realmdns \ # enable use of DNS to find kerberos realms
+--enablemkhomedir #\
+
+
+# with both ldap disabled "kinit ldapuser1" works fine, "su - ldapuser1" fails with "su: user ldapuser1 does not exist":
+authconfig  --update \
+            --disableforcelegacy \
+            --enableshadow \
+            --disableldap \
+            --disableldapauth \
+            --ldapserver="labipa.example.com" \
+            --ldapbasedn="dc=example,dc=com" \
+            --enableldaptls \
+            --enablekrb5 \
+            --krb5kdc="labipa.example.com" \
+            --krb5adminserver="labipa.example.com" \
+            --krb5realm="EXAMPLE.COM" \
+            --enablekrb5kdcdns \
+            --enablekrb5realmdns \
+            --enablemkhomedir
+
+# ldapauth disabled, no sssd installed, only ldap and krb5. kinit ldapuser1 & su - ldapuser1 succeed:
+authconfig  --update \
+            --disableforcelegacy \
+            --enableshadow \
+            --enableldap \
+            --disableldapauth \
+            --ldapserver="labipa.example.com" \
+            --ldapbasedn="dc=example,dc=com" \
+            --enableldaptls \
+            --enablekrb5 \
+            --krb5kdc="labipa.example.com" \
+            --krb5adminserver="labipa.example.com" \
+            --krb5realm="EXAMPLE.COM" \
+            --enablekrb5kdcdns \
+            --enablekrb5realmdns \
+            --enablemkhomedir
+
+# both nslcd and sssd are running
+# kinit ldapuser1; su - ldapuser1 works fine
+authconfig  --update \
+            --disableforcelegacy \
+            --enablesssd \
+            --enablesssdauth \
+            --enableshadow \
+            --enableldap \
+            --disableldapauth \
+            --ldapserver="labipa.example.com" \
+            --ldapbasedn="dc=example,dc=com" \
+            --enableldaptls \
+            --enablekrb5 \
+            --krb5kdc="labipa.example.com" \
+            --krb5adminserver="labipa.example.com" \
+            --krb5realm="EXAMPLE.COM" \
+            --enablekrb5kdcdns \
+            --enablekrb5realmdns \
+            --enablemkhomedir
+
+# both nslcd and sssd are running
+# kinit ldapuser1; su - ldapuser1 works fine
+yum install -y sssd nss-pam-ldapd pam_krb5 krb5-workstation
+authconfig  --update \
+            --disableforcelegacy \
+            --enablesssd \
+            --enablesssdauth \
+            --disableldapauth \
+            --enableldap \
+            --ldapserver="labipa.example.com" \
+            --ldapbasedn="dc=example,dc=com" \
+            --enableldaptls \
+            --enablekrb5 \
+            --krb5kdc="labipa.example.com" \
+            --krb5adminserver="labipa.example.com" \
+            --krb5realm="EXAMPLE.COM" \
+            --enablekrb5kdcdns \
+            --enablekrb5realmdns \
+            --enablemkhomedir
 
 
 systemctl list-unit-files | grep -e sssd -e nslcd
+grep -v -e "#" -e "^$"  /etc/nsswitch.conf
 nslcd -V
+grep -E "pam_sss|pam_ldap|pam_krb5|$"  /etc/pam.d/system-auth
 grep -v -e "#" -e "^$" /etc/nslcd.conf
-authconfig --test | grep SSSD # SSSD ... *enabled*
-grep -e pam_sss -e -pam_ldap /etc/pam.d/system-auth
 grep -v -e "#" -e "^$" -e "\[" /etc/sssd/sssd.conf
+authconfig --test | grep SSSD # SSSD ... *enabled*
 systemctl restart sssd
 systemctl status -l sssd
 kinit admin
@@ -233,21 +357,32 @@ kinit ldapuser1
 ### Chapter 34: Configuring DNS
 - p750 Exercise 34.1
   ```bash
-  yum clean all # server2 has issues with yum
-  yum -y install unbound vim bind-utils # bindutils for dig
-  yum list installed | grep unbound
-  ss -tulpen | grep :53             # is unbound bound to ip-adresses?
-  systemctl start unbound; systemctl enable unbound
-  vim /etc/unbound/unbound.conf     # see p750
-  unbound-checkconf
-  systemctl restart unbound
-  firewall-cmd --permanent --add-service=dns; firewall-cmd --reload
-  firewall-cmd --list-all
-  ss -tulpen | grep :53             # is unbound bound to ip-adresses?
-  dig DNSKEY example.com. @192.168.4.220  # no ad-bit
-  dig DNSKEY rhatcert.com. @192.168.4.220 | grep -E " ad|$"   
+yum clean all                               # server2 V3.0 has issues with yum
+yum -y install unbound vim bind-utils       # bind-utils for dig
+yum list installed | grep unbound
+ss -tulpen | grep :53                       # is anything bound to port 53?
+systemctl start unbound; systemctl enable unbound
+ss -tulpen | grep :53                       # is unbound bound to ip-adresses?
+cp -n /etc/unbound/unbound.conf ~           # make a backup, just in case
+# vim /etc/unbound/unbound.conf             # see p750
+# listen on all interfaces
+sed -i 's/# interface: 0.0.0.0$/interface: 0.0.0.0/g' /etc/unbound/unbound.conf
+# accept requests from 192.168.4.0/24
+sed -i 's/# access-control: ::ffff:127.0.0.1 allow/# access-control: ::ffff:127.0.0.1 allow\n\taccess-control: 192.168.4.0\/24 allow/g' /etc/unbound/unbound.conf
+# forward all requests to 192.168.4.200
+echo $'forward-zone:\n\tname: \".\"\n\tforward-addr: 192.168.4.200' | tee -a /etc/unbound/unbound.conf
+# don't require DNSSEC validation for the example.com domain
+sed -i 's/# domain-insecure: "example.com"/domain-insecure: "example.com"/g' /etc/unbound/unbound.conf
+unbound-checkconf
+firewall-cmd --permanent --add-service=dns; firewall-cmd --reload
+firewall-cmd --list-all
+systemctl restart unbound
+ss -tulpen | grep :53                       # is unbound bound to ip-adresses?
+man dig | grep -A5 adflag
+dig @192.168.4.220 example.com DNSKEY       # no ad-bit
+dig @192.168.4.220 rhatcert.com DNSKEY  | grep -E " ad|$"   
   ```
-- p751 The output of `dig +dnssec DNSKEY rhatcert.com` is fake,
+- p751 Listing 34.2 can not be true:
   - _either_ the domain is signed and returns the `ad` "Authenticated Data" flag,
   - _or_ the domain is not signed, doesn't return the ad-bit and can't return DNSKEYs.  
 Try it yourself and verify that the rhatcert.com domain now is signed and the AD-flag is shown.
