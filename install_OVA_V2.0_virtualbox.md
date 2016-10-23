@@ -112,3 +112,33 @@ cat /etc/resolv.conf # yum only works if FreeIPA @ 192.168.4.200 is up and servi
 # 'yum -y groupinstall Directory\ Client' fails on server2
 yum -y update --security ; shutdown now
 ```
+
+
+# VMware Fusion
+Tested with VMWare Fusion 8.5 on macOS.
+
+## labipa V2.0
+```bash
+nmcli connection modify eth0 ipv4.dns 192.168.4.200 ipv6.dns fd00::200
+systemctl restart NetworkManager
+sleep 2
+cat /etc/resolv.conf
+echo $'password\npassword\npassword' | kinit admin
+# https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/Linux_Domain_Identity_Authentication_and_Policy_Guide/Configuring_IPA_Users-Specifying_Default_User_Settings.html
+ipa config-mod --homedirectory /home/ldap --defaultshell /bin/bash
+for i in `ipa user-find | grep "User login: " | sed 's/User login: //g'`; do echo $'password'| kinit admin; ipa user-mod $i --homedir=/home/ldap/$i --shell=/bin/bash | grep -E "Modified|Home|Login"; echo $'password\npassword\npassword'| kinit $i ; done
+```
+shutdown labipa and in VMware Fusion create a snaphot and call it 'begin'
+
+## server1
+```bash
+yum whatprovides */host | grep bind
+mkdir -p /etc/openldap/cacerts
+```
+
+## server2
+```bash
+yum -y install bash-completion
+yum whatprovides */host | grep bind
+mkdir -p /etc/openldap/cacerts
+```

@@ -22,8 +22,11 @@ You can run these lab environments in VMware Fusion/Workstation, in virtualBox o
 |  [V3.0](http://www.rhatcert.com/downloads/) | - supported<br />- supports LVM   |   | - should work <br >- supports LVM  | - not tested  |
 |  [Vagrant](../../../RHCSA-RHCE-Lab-Environment/) | - [not<br /> recommended](http://blog.scottlowe.org/2016/09/28/why-now-using-virtualbox-with-vagrant/)<br />- [$$](https://www.vagrantup.com/vmware/#buy-now) |   | - not tested<br >- should work <br >- supports vmx  | - not tested  |
 
+Linux Foundation
+[Handbook](http://training.linuxfoundation.org/go/candidate_handbook)
 
-
+## RHCSE
+[RHCSE skills-assessment](http://www.redhat.com/en/services/training/skills-assessment)
 
 ## Pro Tip
 On **macOS** switch from VirtualBox to VMware Fusion by following these steps<br />- shutdown virtualbox<br />- execute:

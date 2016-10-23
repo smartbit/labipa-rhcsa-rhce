@@ -1,4 +1,31 @@
 # Unauthorized Errorlog [Red Hat RHCSA ®/ RHCE® 7 Cert Guide](http://www.sandervanvugt.com/book-red-hat-rhcsa-rhce-7-cert-guide/)
+
+## Chapter 2: Using Essential Tools
+- p51 man pages index caches can also be **U** pdated with `man -u` instead of `mandb`.  
+  To play around with indexes, delete them all with `find /var/cache/man/ -name index.db -delete` see `man man`
+- p
+
+## Chapter 4: Working with Text Files
+|  | Glob | regex|
+|--|--|--|
+| `*` | any string including empty | 0 or more of preceding character |
+| `?` | match any _single_ character | 1 or more of preceding character |
+| `^` |  | start of string |
+| `!` | negate, eg **[!a-d]** any _except_ a-d |  **\[!\]** |
+| `.` | match files starting with *.extention*, eg. `tar c .` or `cp .* ~ `| any character except newline **a.c**: abc, aac, a2c |
+| `\` | remove special meaning of **?**, *****, **[** & **]** | |
+| `{ }` | terms are seperated with commas eg `cp {*.pdf,*.doc}` |  |
+| `[ ]` | specifies a range eg **[a-z]** or **[a,o,u]**|  |
+| `' '`| escape bash expansion (globbing) eg `touch 'foo*'` |  |
+|  |  |  |
+|  |  |  |
+|  |  |  |
+|  |  |  |
+|  |  | x |
+for more details see `man glob` and `man 7 regex` or [Wildcards mini-guide](http://tldp.org/LDP/GNU-Linux-Tools-Summary/html/x11655.htm)
+
+
+
 ## Chap 6
 - p137 step 6. `for i in lucy, lori, bob;do useradd $i; done` --> `for i in lucy lori bob;do useradd $i; done`
 - p139 wrong **groupmems -g sales -l** "This shows users who are a member of this group as a secondary group assignment~~, but also users who are a member of this group as the primary group assignment~~."
@@ -21,17 +48,21 @@
   see https://arthurdejong.org/nss-pam-ldapd/setup
   ```bash
   yum install -y openldap-clients nss-pam-ldapd
-  mkdir /etc/openldap/cacerts
+  sed -i 's/FORCELEGACY=no/FORCELEGACY=yes/g' /etc/sysconfig/authconfig
+  sed -i 's/USESSSD=yes/USESSSD=no/g' /etc/sysconfig/authconfig
+  grep -E "USESSSDAUTH|USESSSD|FORCELEGACY" /etc/sysconfig/authconfig
+  mkdir -p /etc/openldap/cacerts
   scp labipa.example.com:/etc/ipa/ca.crt /etc/openldap/cacerts/
-  authconfig --enableldap --enableldapauth \
+  authconfig --update \
+             --enableldap --enableldapauth --enableldaptls \
+             --enableforcelegacy --disablesssd --disablesssdauth\
              --ldapserver="labipa.example.com" \
-             --ldapbasedn="dc=example,dc=com" \
-             --enableldaptls --update
+             --ldapbasedn="dc=example,dc=com"
   systemctl list-unit-files | grep -e sssd -e nslcd
   nslcd -V
   grep -v -e "#" -e "^$" /etc/nslcd.conf
-  authconfig --test | grep SSSD # SSSD ... *disabled*
-  grep -e pam_sss -e -pam_ldap /etc/pam.d/system-auth  
+  authconfig --test | grep SSSD # SSSD ... disabled
+  grep -E "pam_sss|pam_ldap|pam_krb5|$"  /etc/pam.d/system-auth  
   getent passwd ldapuser1
   su - ldapuser1
   whoami
@@ -46,23 +77,27 @@
   With CentOS 7.0 (images V2.0) you might try sssd on Server2 instead (/usr/lib/systemd/systemd-logind crashed on Server1 with CentOS 7.0)
   ```bash
   yum install -y sssd # on Server2
-  mkdir /etc/openldap/cacerts
+  mkdir -p /etc/openldap/cacerts
   scp labipa.example.com:/etc/ipa/ca.crt /etc/openldap/cacerts/
-  authconfig --enableldap --enableldapauth \
+  grep -E "USESSSDAUTH|USESSSD|FORCELEGACY" /etc/sysconfig/authconfig
+  authconfig --update \
+             --enableldap --enableldapauth --enableldaptls \
+             --disableforcelegacy  --enablesssdauth --enablesssd \
              --ldapserver="labipa.example.com" \
              --ldapbasedn="dc=example,dc=com" \
-             --enableldaptls --enablemkhomedir --update
+             --enablemkhomedir
    systemctl list-unit-files | grep -e sssd -e nslcd
    grep -v -e "#" -e "^$" -e "^\[" /etc/sssd/sssd.conf
    authconfig --test | grep SSSD # SSSD ... *enabled*
-   grep -e pam_sss -e -pam_ldap /etc/pam.d/system-auth
+   grep -E "pam_sss|pam_ldap|pam_krb5|$"  /etc/pam.d/system-auth  
    getent passwd ldapuser1
    su - ldapuser1
-   whoami
+   id
    pwd
    exit
   ```
-  #### compare nslcd and sssd
+  To get a better understanding of /etc/pam.d/system-auth, read `man pam.d` (or equivalent `man 5 pam.conf`). See p567
+  #### /etc/pam.d/system-auth compare nslcd and sssd
   ```txt
   NSLCD / yum install -y openldap-clients nss-pam-ldapd                     SSSD / yum install -y sssd
   #%PAM-1.0                                                                 #%PAM-1.0
@@ -178,6 +213,7 @@ In a second tty (eg ctrl-leftalt-F2 or `chvt 2`) run `udevadm monitor` and see t
     See `man 5 modprobe.d` for details on the .conf file.
 
 ### Chapter 25: Configuring External Authentication and Authorization
+- p563 see service principles with passwords in keytab using `klist -kt /etc/krb5.keytab`
 - p563 Centos 7.2 `man authconfig` states "The **authconfig-tui** is _deprecated_. No new configuration settings will be supported by its text user interface. Use **system-config-authentication GUI** application or the command line options instead." dated 22 July 2011
 
 ```bash
@@ -199,16 +235,19 @@ In a second tty (eg ctrl-leftalt-F2 or `chvt 2`) run `udevadm monitor` and see t
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
-- p563 for the exercises to work, create a few accounts first
+- p569 for the exercises to work, create a few accounts first
 https://www.certdepot.net/sys-understand-authconfig/
 ```bash
 dig labipa.example.com
 yum groups info Directory\ Client
 yum groups install Directory\ Client -y
-# yum install -y pam_krb5 krb5-workstation   # not needed, part of
+# make sure that sssd is running
+systemctl status sssd
 mkdir -p /etc/openldap/cacerts
 scp labipa.example.com:/etc/ipa/ca.crt /etc/openldap/cacerts
+sed -i 's/USESSSDAUTH=no/USESSSDAUTH=yes/g' /etc/sysconfig/authconfig
 grep -E "USESSSDAUTH|USESSSD|FORCELEGACY" /etc/sysconfig/authconfig
+
 # sssd service running, "su - ldapuser1" works fine
 authconfig  --update \
             --enablecachecreds \
@@ -222,7 +261,7 @@ authconfig  --update \
             --enablemkhomedir
 
 
-yum -y install nss-pam-ldapd  # without this package 'su - ldapuser1' fails
+  # without this package 'su - ldapuser1' fails
 # if you forgot, install nnss-pam-ldap and run authconfig again
 # no sssd installed, only ldap and krb5. kinit ldapuser1 & su - ldapuser1 succeed:
 authconfig  --update \
@@ -291,7 +330,7 @@ authconfig  --update \
             --enablekrb5realmdns \
             --enablemkhomedir
 
-# both nslcd and sssd are running
+# both nslcd and sssd are running(?) or enabled(?)
 # kinit ldapuser1; su - ldapuser1 works fine
 authconfig  --update \
             --disableforcelegacy \
@@ -313,26 +352,44 @@ authconfig  --update \
 
 # both nslcd and sssd are running
 # kinit ldapuser1; su - ldapuser1 works fine
+# sssd service failed
+yum groups install Directory\ Client -y
+yum install -y nss-pam-ldapd
 yum install -y sssd nss-pam-ldapd pam_krb5 krb5-workstation
 authconfig  --update \
-            --disableforcelegacy \
-            --enablesssd \
-            --enablesssdauth \
-            --disableldapauth \
-            --enableldap \
+            --enableldap --enableldapauth --enableldaptls \
+            --disableforcelegacy  --enablesssdauth --enablesssd \
             --ldapserver="labipa.example.com" \
             --ldapbasedn="dc=example,dc=com" \
-            --enableldaptls \
-            --enablekrb5 \
+            --enablemkhomedir
+# nslcd.service                               disabled
+# sssd.service                                enabled
+authconfig  --update \
+            --enableldap --enableldapauth --enableldaptls \
+            --disableforcelegacy  --enablesssdauth --enablesssd \
+            --enablekrb5 --enablekrb5kdcdns --enablekrb5realmdns \
+            --ldapserver="labipa.example.com" \
+            --ldapbasedn="dc=example,dc=com" \
             --krb5kdc="labipa.example.com" \
             --krb5adminserver="labipa.example.com" \
             --krb5realm="EXAMPLE.COM" \
-            --enablekrb5kdcdns \
-            --enablekrb5realmdns \
+            --enablemkhomedir
+# nslcd.service                               enabled
+# sssd.service                                enabled
+
+authconfig  --update \
+            --enableldap --enableldapauth --enableldaptls \
+            --disableforcelegacy  --enablesssdauth --enablesssd \
+            --enablekrb5 --disablecachecreds --disablecache \
+            --ldapserver="labipa.example.com" \
+            --ldapbasedn="dc=example,dc=com" \
+            --krb5kdc="labipa.example.com" \
+            --krb5adminserver="labipa.example.com" \
+            --krb5realm="EXAMPLE.COM" \
             --enablemkhomedir
 
 
-systemctl list-unit-files | grep -e sssd -e nslcd
+systemctl --type=service | grep -e sssd -e nslcd -e UNIT
 grep -v -e "#" -e "^$"  /etc/nsswitch.conf
 nslcd -V
 grep -E "pam_sss|pam_ldap|pam_krb5|$"  /etc/pam.d/system-auth
@@ -342,6 +399,7 @@ authconfig --test | grep SSSD # SSSD ... *enabled*
 systemctl restart sssd
 systemctl status -l sssd
 kinit admin
+getent passwd ldapuser1
 su - ldapuser1
 authconfig-tui
 yum search pam_ldap
@@ -350,9 +408,32 @@ yum -y install nss-pam-ldapd
 authconfig-tui
 kinit admin
 kinit ldapuser1
+```
 
+[IdM client install manual](https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/Linux_Domain_Identity_Authentication_and_Policy_Guide/Installing_the_IPA_Client_on_Linux.html) RHEL 7
+```bash
+systemctl list-unit-files | grep -e chronyd -e ntpd
+systemctl mask chronyd.service # see p863
+yum -y install ipa-client
+# make sure the admin password is not expired on labipa
+ipa-client-install  --force-join \
+                    --domain="example.com" \
+                    --mkhomedir --force-ntpd \
+                    --request-cert \
+                    -p admin -w password -U #unattended
+systemctl --type=service  | grep -E "chronyd|ntpd|sssd|nslcd" # no nslcd!
+grep -E "pam_sss|pam_ldap|pam_krb5|$"  /etc/pam.d/system-auth # no pam_ldap nor pam_krb5 !!
+klist -kt /etc/krb5.keytab
+systemctl status -l systemd-logind # everthing ok? if not try:
+grep systemd-logind /var/log/audit/audit.log | audit2allow -M mypol;semodule -i mypol.pp
 
-  ```
+```
+### Chapter 23: Configuring Remote Mounts and FTP
+- p533 to change defaults, on labipa run: `ipa config-mod --homedirectory /home/ldap --defaultshell /bin/bash`  
+to change existing users, on labipa run `for i in `ipa user-find | grep "User login: " | sed 's/User login: //g'`; do ipa user-mod $i --homedir=/home/ldap/$i --shell=/bin/bash; done`
+
+### Chapter 25: Configuring External Authentication and Authorization
+- p567 To get a better understanding of /etc/pam.d/system-auth, read `man pam.d` (or equivalent `man 5 pam.conf`).
 
 ### Chapter 34: Configuring DNS
 - p750 Exercise 34.1
@@ -389,3 +470,34 @@ Try it yourself and verify that the rhatcert.com domain now is signed and the AD
 - p752 TIP part2: using `unbound-control-setup` is far from travial. Unless practised, don't try on the exam.
 - p752 you get the trust anchors  
 - p752
+
+
+### Chapter 40: Managing Time Synchronization
+- p863 chronyd is not compatible with ipa, and [this won't change any soon](https://fedorahosted.org/freeipa/ticket/4963#comment:5)
+
+### Chapter 41: Final Preparation
+- p877 Selfstudy candidates can take two types of exams
+
+|  | individual exam | classroom exam |  
+|--|--|--|
+| location | **few** locations, [check here](https://www.redhat.com/en/services/training/locations-facilities) | multiple locations |
+| date/time | self select, upon seat availability | **limited** dates, fixed time & date  |
+| price  | $/€500+VAT | $/€500+VAT |
+| designation |  EX200K or EX300K \(Kiosk\)| EX200 or EX300 |
+| test provider | [PSI](https://www.examslocal.com/) | RedHat |
+| SSO provider | RedHat account | RedHat account |
+
+
+
+
+RedHat now refers to *individual exams* to what Sander calls **Kiosk** exams and they have a trailing **K** eg EX200K. You can find them listed at [PSI](https://www.examslocal.com/). Take the following steps to book an kiosk exam at you local training provider.
+  - create an account at RedHat, do not use your Linux Foundation credentials as at the test location authentication with Linux Foundation will *fail*, see [SSO login problem that prevents the exam from being taken](https://www.certdepot.net/bad-experience-redhat-labs-exam/).
+  - [login at RedHat](https://www.redhat.com/wapps/ugc/protected/account.html) and in EU verify you have you VAT number added (*if you have one*).
+  - select an **individual** exam [EX200](https://www.redhat.com/en/services/training/ex200-red-hat-certified-system-administrator-rhcsa-exam#)/[EX300](https://www.redhat.com/en/services/training/ex300-red-hat-certified-engineer-rhce-exam)
+  - then select *Enroll*
+  - then select the city where you want to take the exam
+  - add to cart
+  - pay for your exam
+  - it might take a few days for your voucher code to become available.
+  - you get a voucher code that you can use to book at the selected venue at a date & time you prefer. The voucher is valid for 1 year.
+  - ???
